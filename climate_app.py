@@ -44,11 +44,11 @@ def welcome():
 <ul>
   <li><a href="/api/v1.0/precipitation">/api/v1.0/precipitation</a></li>
 </ul>
-<p>Station Analysis:</p>
+<p>List of Stations:</p>
 <ul>
   <li><a href="/api/v1.0/stations">/api/v1.0/stations</a></li>
 </ul>
-<p>Temperature Analysis:</p>
+<p>TOBS Analysis:</p>
 <ul>
   <li><a href="/api/v1.0/tobs">/api/v1.0/tobs</a></li>
 </ul>
@@ -74,18 +74,20 @@ def precipitation():
     session = Session(engine)
 
     # Query Measurement
-    results = (session.query(Measurement.date, Measurement.tobs)
-                      .order_by(Measurement.date))
+    one_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+    results = (session.query(Measurement.date, Measurement.prcp).\
+                filter(Measurement.date>= one_year).\
+                order_by(Measurement.date))
     
     # Create a dictionary
-    precipitation_date_tobs = []
+    precipitation_date = []
     for each_row in results:
         dt_dict = {}
         dt_dict["date"] = each_row.date
-        dt_dict["tobs"] = each_row.tobs
-        precipitation_date_tobs.append(dt_dict)
+        dt_dict["prcp"] = each_row.prcp
+        precipitation_date.append(dt_dict)
 
-    return jsonify(precipitation_date_tobs)
+    return jsonify(precipitation_date)
 
 
 @app.route("/api/v1.0/stations") #Return a JSON list of stations from the dataset
@@ -120,9 +122,10 @@ def tobs():
      
     # Query station names and their observation counts sorted descending and select most active station
     q_station_list = (session.query(Measurement.station, func.count(Measurement.station))
-                             .group_by(Measurement.station)
-                             .order_by(func.count(Measurement.station).desc())
-                             .all())
+                        .filter(Measurement.station == 'USC00519281')
+                        .group_by(Measurement.station)
+                        .order_by(func.count(Measurement.station).desc())
+                        .all())
     
     station_hno = q_station_list[0][0]
     print(station_hno)
@@ -152,7 +155,7 @@ def start_only(start):
     # Create session (link) from Python to the DB
     session = Session(engine)
 
-    # Date Range (only for help to user in case date gets entered wrong)
+   # Date Range 
     date_range_max = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
     date_range_max_str = str(date_range_max)
     date_range_max_str = re.sub("'|,", "",date_range_max_str)
@@ -193,7 +196,7 @@ def start_end(start, end):
     # Create session (link) from Python to the DB
     session = Session(engine)
 
-    # Date Range (only for help to user in case date gets entered wrong)
+    # Date Range
     date_range_max = session.query(Measurement.date).order_by(Measurement.date.desc()).first()
     date_range_max_str = str(date_range_max)
     date_range_max_str = re.sub("'|,", "",date_range_max_str)
